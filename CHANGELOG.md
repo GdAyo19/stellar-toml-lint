@@ -19,6 +19,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whose `current_protocol_version` is supported by the instance's `core_supported_protocol_version`,
   so a misconfigured, offline, or protocol-lagged Horizon endpoint fails the run instead of
   surfacing later as broken wallet interactions.
+- `general/lowercase-public-key` warning: Stellar public keys (`SIGNING_KEY`,
+  `[[CURRENCIES]].issuer`, `[[VALIDATORS]].PUBLIC_KEY`) must use uppercase base32. Lowercase letters
+  are flagged with the corrected uppercase form as the suggestion, so a case mismatch cannot cause
+  silent string-comparison failures in wallets.
 
 ### Added
 
