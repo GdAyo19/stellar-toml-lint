@@ -19,10 +19,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whose `current_protocol_version` is supported by the instance's `core_supported_protocol_version`,
   so a misconfigured, offline, or protocol-lagged Horizon endpoint fails the run instead of
   surfacing later as broken wallet interactions.
-- `general/lowercase-public-key` warning: Stellar public keys (`SIGNING_KEY`,
-  `[[CURRENCIES]].issuer`, `[[VALIDATORS]].PUBLIC_KEY`) must use uppercase base32. Lowercase letters
-  are flagged with the corrected uppercase form as the suggestion, so a case mismatch cannot cause
-  silent string-comparison failures in wallets.
+- `sep38/prices-endpoint-error`, `sep38/malformed-price-response`, `sep38/quote-endpoint-error`, and
+  `sep38/malformed-quote-response` under `--check-network`: when `ANCHOR_QUOTE_SERVER` is declared,
+  the linter GETs `/prices?sell_asset=...` for each classic currency and asserts a 200 whose body
+  carries a `buy_assets` array of valid price objects, and probes `/quote` for 5xx or non-JSON 200
+  answers — so a quote server returning 500s or malformed JSON fails the run instead of surfacing
+  later as wallets unable to calculate transaction amounts.
 
 ### Added
 
