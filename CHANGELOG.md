@@ -9,6 +9,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `--format junit` emits a JUnit XML test report for CI dashboards that chart test results (Jenkins,
+  Bamboo, CircleCI, Azure DevOps). Error-severity findings are reported as `<failure>` elements and
+  warnings as `<error>` elements, so a dashboard counting failures matches the exit code (#143).
+
 - Opt-in `--check-network` flag to query Horizon and report non-existent `SIGNING_KEY` or `ACCOUNTS` entries as warnings (#7).
 - `network/horizon-unreachable` and `network/horizon-protocol-outdated` under `--check-network`:
   the linter now GETs `HORIZON_URL` and asserts the response is a valid Horizon root document

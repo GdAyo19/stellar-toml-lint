@@ -11,7 +11,7 @@ import { basename } from 'node:path';
 import process from 'node:process';
 import { lint, lintDomain, finalize } from './lint.js';
 import { checkNetworkAccounts } from './network-checks.js';
-import { formatGithub, formatJson, formatSarif, formatText } from './reporters.js';
+import { formatGithub, formatJson, formatJunit, formatSarif, formatText } from './reporters.js';
 import { checkDisplayDecimals } from './rules/display-decimals-audit.js';
 import { checkHorizon } from './rules/horizon-check.js';
 import { allRules } from './rules/index.js';
@@ -20,7 +20,7 @@ import type { LintResult, RuleOverrides, Severity } from './types.js';
 const VERSION = '0.1.0';
 const DEFAULT_PATH = 'stellar.toml';
 
-type Format = 'text' | 'json' | 'sarif' | 'github';
+type Format = 'text' | 'json' | 'sarif' | 'github' | 'junit';
 
 interface Cli {
   noSuggestions?: boolean;
@@ -48,7 +48,7 @@ USAGE
 OPTIONS
   -d, --domain <domain>   Domain serving the file. Enables CORS, content-type and
                           ORG_URL same-domain checks. Fetches unless files are given.
-  -f, --format <fmt>      text (default), json, sarif, or github
+  -f, --format <fmt>      text (default), json, sarif, github, or junit
       --strict            Treat warnings as errors
       --max-warnings <n>  Fail if warnings exceed n
       --off <rule>        Disable a rule (repeatable)
@@ -152,6 +152,8 @@ function render(result: LintResult, name: string, cli: Cli, color: boolean): str
       return formatSarif(result, name, VERSION);
     case 'github':
       return formatGithub(result, name);
+    case 'junit':
+      return formatJunit(result, name);
     case 'text':
       return formatText(result, {
         filename: name,
@@ -218,7 +220,9 @@ function parseArgs(argv: string[]): Cli | 'handled' {
       case '--format': {
         const value = requireValue(argv, ++i, arg);
         if (!isFormat(value)) {
-          throw new Error(`Unknown format "${value}". Expected text, json, sarif, or github.`);
+          throw new Error(
+            `Unknown format "${value}". Expected text, json, sarif, github, or junit.`,
+          );
         }
         cli.format = value;
         break;
@@ -289,7 +293,13 @@ function requireValue(argv: string[], index: number, flag: string): string {
 }
 
 function isFormat(value: string): value is Format {
-  return value === 'text' || value === 'json' || value === 'sarif' || value === 'github';
+  return (
+    value === 'text' ||
+    value === 'json' ||
+    value === 'sarif' ||
+    value === 'github' ||
+    value === 'junit'
+  );
 }
 
 /** Rejects typo'd rule ids rather than silently ignoring the override. */
