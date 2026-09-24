@@ -75,19 +75,20 @@ cat stellar.toml | stellar-toml-lint -
 
 ### Options
 
-| Flag                 | Effect                                                                |
-| -------------------- | --------------------------------------------------------------------- |
-| `-d, --domain <d>`   | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks |
-| `-f, --format <fmt>` | `text` (default), `json`, `sarif`, `github`                           |
-| `--strict`           | Treat warnings as errors                                              |
-| `--max-warnings <n>` | Fail if warnings exceed `n`                                           |
-| `--off <rule>`       | Disable a rule (repeatable)                                           |
-| `--error <rule>`     | Raise a rule to error (repeatable)                                    |
-| `--warn <rule>`      | Lower a rule to warning (repeatable)                                  |
-| `-q, --quiet`        | Show errors only                                                      |
-| `--show-help-urls`   | Print the spec link for each finding                                  |
-| `--list-rules`       | Print every rule and exit                                             |
-| `--no-suggestions`   | Hide diagnostic suggestions in the output                             |
+| Flag                 | Effect                                                                  |
+| -------------------- | ----------------------------------------------------------------------- |
+| `-d, --domain <d>`   | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks   |
+| `-f, --format <fmt>` | `text` (default), `json`, `sarif`, `github`                             |
+| `--strict`           | Treat warnings as errors                                                |
+| `--max-warnings <n>` | Fail if warnings exceed `n`                                             |
+| `--off <rule>`       | Disable a rule (repeatable)                                             |
+| `--error <rule>`     | Raise a rule to error (repeatable)                                      |
+| `--warn <rule>`      | Lower a rule to warning (repeatable)                                    |
+| `-q, --quiet`        | Show errors only                                                        |
+| `--show-help-urls`   | Print the spec link for each finding                                    |
+| `--check-network`    | Verify `SIGNING_KEY`, `ACCOUNTS`, and `HORIZON_URL` against the network |
+| `--list-rules`       | Print every rule and exit                                               |
+| `--no-suggestions`   | Hide diagnostic suggestions in the output                               |
 
 Exit codes: **0** no errors, **1** problems found, **2** bad usage or I/O failure.
 
@@ -238,6 +239,13 @@ emit `currencies/missing-anchor-asset-type` as an error. Missing `anchor_asset` 
 type, size, and the security of the TLS session: a negotiated protocol of TLS 1.0, TLS 1.1, SSLv2,
 or SSLv3, and cipher suites built on 3DES, DES, RC4, CBC, NULL, or EXPORT primitives. Nothing here
 fires for a local file, so offline linting never depends on a network connection.
+
+**Network** (with `--check-network`) — queries the `HORIZON_URL` endpoint the file advertises and
+asserts it answers with a valid Horizon root document. An endpoint that is offline, misconfigured,
+or returns something other than Horizon JSON emits `network/horizon-unreachable` (error); a
+`current_protocol_version` that the instance's `core_supported_protocol_version` does not cover
+emits `network/horizon-protocol-outdated` (warning). The same flag also verifies `SIGNING_KEY` and
+`ACCOUNTS` exist on the network.
 
 ### Severity
 
