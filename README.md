@@ -971,6 +971,34 @@ To build the browser bundles:
 npm run build:browser
 ```
 
+### On the edge (Cloudflare Workers, Vercel Edge, Fastly)
+
+The edge entry point (`@anchor-tools/stellar-toml-lint/edge`, `dist/edge.js`)
+lints a `stellar.toml` string with zero Node.js built-ins — no `node:fs`,
+`node:crypto`, or `node:http`. Transport is the runtime's `fetch` and hashing
+is the Web Cryptography API (`crypto.subtle`), so it loads in Cloudflare
+Workers, Vercel Edge, Fastly Compute@Edge, Deno, and any other
+WinterCG-compatible runtime:
+
+```ts
+import { lintEdge } from 'stellar-toml-lint/edge';
+
+const result = await lintEdge(tomlContent, {
+  domain: 'example.com',
+  strict: true,
+  expectedContentDigest: 'sha256-hex-...',
+});
+```
+
+`expectedContentDigest` is an optional integrity gate: when set, the run fails
+with an `edge/content-digest-mismatch` error unless the SHA-256 of the
+content matches — computed with `crypto.subtle`, so nothing in this entry
+point touches `node:crypto`. Build the bundle with:
+
+```bash
+npm run build:edge
+```
+
 ## Formatting
 
 `--format-file` rewrites a file into a canonical layout, so two anchors' files line up when you
