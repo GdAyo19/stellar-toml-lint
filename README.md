@@ -1172,6 +1172,53 @@ Configure the run with pipeline variables, all optional:
 Both templates are validated by a YAML parser in `test/templates.test.ts`, exercised by the
 `test-templates.yml` workflow, so a broken copy-paste template fails CI before it can be merged.
 
+### Tekton Pipelines (OpenShift)
+
+Enterprise banks on Red Hat OpenShift can run the linter as a Tekton Catalog
+Task ([`integrations/tekton/task.yaml`](./integrations/tekton/task.yaml)). The
+task lints a `stellar.toml` from a Tekton workspace and emits two results:
+
+| Parameter   | Default        | Effect                                                |
+| ----------- | -------------- | ----------------------------------------------------- |
+| `TOML_PATH` | `stellar.toml` | File to lint, relative to the workspace root.         |
+| `FORMAT`    | `text`         | Output reporter format (text, json, sarif, sonar, …). |
+| `STRICT`    | `false`        | Treat warnings as errors (`true` or `false`).         |
+
+| Result           | Meaning                                      |
+| ---------------- | -------------------------------------------- |
+| `PROBLEMS_COUNT` | Total problems found (errors + warnings).    |
+| `VERDICT`        | `PASS` or `FAIL` per the exit-code contract. |
+
+The step image is `ghcr.io/anchor-tools/stellar-toml-lint:latest`, and the
+step's exit code is the linter's, so a failing file fails the task:
+
+```yaml
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: stellar-toml-lint
+spec:
+  params:
+    - name: TOML_PATH
+      value: public/.well-known/stellar.toml
+    - name: FORMAT
+      value: text
+    - name: STRICT
+      value: 'true'
+  workspaces:
+    - name: source
+  results:
+    - name: PROBLEMS_COUNT
+    - name: VERDICT
+  steps:
+    - name: lint
+      image: ghcr.io/anchor-tools/stellar-toml-lint:latest
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        stellar-toml-lint --format "$(params.FORMAT)" $( [ "$(params.STRICT)" = "true" ] && echo --strict ) "$(workspaces.source.path)/$(params.TOML_PATH)"
+```
+
 ### JUnit XML reports
 
 Jenkins, Bamboo, CircleCI, and Azure DevOps read JUnit XML to draw test pass/fail charts and suite
