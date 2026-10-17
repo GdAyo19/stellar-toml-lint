@@ -134,7 +134,7 @@ it was before.
 | Flag                    | Effect                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------- |
 | `-d, --domain <d>`      | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks           |
-| `-f, --format <fmt>`    | `text` (default), `summary`, `json`, `sarif`, `github`, `junit`                 |
+| `-f, --format <fmt>`    | `text` (default), `summary`, `json`, `sarif`, `github`, `junit`, `sonar`        |
 | `--format-file`         | Rewrite files in place in canonical SEP-1 layout                                |
 | `--strict`              | Treat warnings as errors                                                        |
 | `--max-warnings <n>`    | Fail if warnings exceed `n`                                                     |
@@ -154,7 +154,7 @@ it was before.
 | Flag                      | Effect                                                                          |
 | ------------------------- | ------------------------------------------------------------------------------- |
 | `-d, --domain <d>`        | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks           |
-| `-f, --format <fmt>`      | `text` (default), `summary`, `json`, `sarif`, `github`, `junit`                 |
+| `-f, --format <fmt>`      | `text` (default), `summary`, `json`, `sarif`, `github`, `junit`, `sonar`        |
 | `--strict`                | Treat warnings as errors                                                        |
 | `--max-warnings <n>`      | Fail if warnings exceed `n`                                                     |
 | `--check-network`         | Verify accounts, `HORIZON_URL`, `AUTH_SERVER`, and `ANCHOR_QUOTE_SERVER` online |
@@ -178,7 +178,7 @@ Exit codes: **0** no errors, **1** problems found, **2** bad usage or I/O failur
 | Flag                        | Effect                                                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `-d, --domain <d>`          | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks                                                   |
-| `-f, --format <fmt>`        | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`             |
+| `-f, --format <fmt>`        | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`, `sonar`    |
 | `--strict`                  | Treat warnings as errors                                                                                                |
 | `--max-warnings <n>`        | Fail if warnings exceed `n`                                                                                             |
 | `--check-network`           | Verify accounts, `HORIZON_URL`, SEP-8 flags, `ANCHOR_QUOTE_SERVER`, and SEP-6 `/info` online                            |
@@ -229,7 +229,7 @@ Exit codes: **0** no errors, **1** problems found, **2** bad usage or I/O failur
 | Flag                        | Effect                                                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `-d, --domain <d>`          | Serving domain. Enables CORS, content-type, TLS, and `ORG_URL` checks                                                   |
-| `-f, --format <fmt>`        | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`             |
+| `-f, --format <fmt>`        | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`, `sonar`    |
 | `--strict`                  | Treat warnings as errors                                                                                                |
 | `--max-warnings <n>`        | Fail if warnings exceed `n`                                                                                             |
 | `--check-network`           | Verify accounts, CORS pre-flight responses, `HORIZON_URL`, SEP-8 flags, `ANCHOR_QUOTE_SERVER`, and SEP-6 `/info` online |
@@ -273,7 +273,7 @@ failure.
 | Flag                               | Effect                                                                                                                                                                                                          |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-d, --domain <d>`                 | Serving domain. Enables CORS, content-type, TLS, image-asset, and `ORG_URL` checks                                                                                                                              |
-| `-f, --format <fmt>`               | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`                                                                                                     |
+| `-f, --format <fmt>`               | `text` (default), `summary`, `json`, `ndjson`, `sarif`, `github`, `junit`, `html`, `checkstyle`, `markdown`, `sonar`                                                                                            |
 | `--strict`                         | Treat warnings as errors                                                                                                                                                                                        |
 | `--max-warnings <n>`               | Fail if warnings exceed `n`                                                                                                                                                                                     |
 | `--fail-on <severity>`             | Exit `1` when any diagnostic meets or exceeds `error`, `warning`, or `info`; takes precedence over `--strict`                                                                                                   |
@@ -1191,6 +1191,47 @@ Each linted file becomes one `<file>` element and each diagnostic an `<error>` c
 `column`, `severity`, `message`, and `source` — the rule id, so a dashboard can group, baseline, or
 suppress findings the way it would a Checkstyle check. Severity maps straight across (`error`,
 `warning`, `info`). Lint one file per report, as with the other machine-readable formats.
+
+### SonarQube Generic Issue Data
+
+Enterprise code quality gates (SonarQube / SonarCloud) ingest findings through the
+[Generic Issue Data format](https://docs.sonarsource.com/sonarqube/cloud/external-issues/generic-issue-format/).
+`--format sonar` emits SEP-1 diagnostics as that JSON, one issue per diagnostic:
+
+```console
+$ stellar-toml-lint public/.well-known/stellar.toml --format sonar > sonar-results.json
+```
+
+```json
+{
+  "issues": [
+    {
+      "engineId": "stellar-toml-lint",
+      "ruleId": "currencies/issuer-or-contract",
+      "type": "CODE_SMELL",
+      "severity": "MAJOR",
+      "primaryLocation": {
+        "filePath": "public/.well-known/stellar.toml",
+        "message": "CURRENCIES[0].issuer is not a valid Stellar account ID",
+        "textRange": { "startLine": 31, "startColumn": 1, "endLine": 31, "endColumn": 1 }
+      }
+    }
+  ]
+}
+```
+
+Security rules map to `VULNERABILITY`, file and schema errors map to `BUG`, and
+everything else maps to `CODE_SMELL`. Severities map `error` → `BLOCKER`,
+`warning` → `MAJOR`, and `info` → `MINOR`. Programmatically, `formatSonar`
+from `stellar-toml-lint` produces the same document:
+
+```ts
+import { lint, formatSonar } from 'stellar-toml-lint';
+import { writeFile } from 'node:fs/promises';
+
+const result = lint(await readFile('stellar.toml', 'utf8'));
+await writeFile('sonar-results.json', formatSonar(result, 'stellar.toml'));
+```
 
 ### One-line status summaries
 
