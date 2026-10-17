@@ -881,6 +881,36 @@ worker.onmessage = (e) => console.log('Lint result:', e.data.result);
 worker.postMessage({ type: 'lint', content: tomlString });
 ```
 
+### Web Worker thread pool
+
+A single worker lints one file at a time. For a playground that imports a ZIP of
+multi-tenant anchor files, or a monorepo holding many TOML configurations,
+`WorkerPool` spins up `N` dedicated workers (`navigator.hardwareConcurrency`
+by default) and batch-processes files off the main thread, so the UI never
+stutters while a large batch is linted:
+
+```ts
+import { WorkerPool } from 'stellar-toml-lint/browser';
+
+const pool = new WorkerPool();
+const entries = await pool.lintFiles(
+  [
+    { path: 'accounts/acme/stellar.toml', content: acmeToml },
+    { path: 'accounts/globex/stellar.toml', content: globexToml },
+  ],
+  {
+    onProgress: (progress) => console.log(`${progress.percent}%`),
+  },
+);
+// entries[i] matches files[i]: { path, result, error }
+pool.terminate();
+```
+
+Tasks are handed out round-robin, a worker that crashes is replaced so it
+cannot stall the batch, and every failure is reported per-file instead of
+failing the whole run. When Workers are unavailable the pool falls back to
+processing the queue on the current thread with the same API.
+
 ### Capabilities & Typings
 
 One capability does not survive the move: a page cannot observe a TLS session, so the `security/*` audit is skipped in the browser and reported as not observed rather than guessed. `browserCapabilities` says the same thing at runtime, for callers that branch on it.
